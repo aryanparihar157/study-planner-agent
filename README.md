@@ -1,6 +1,6 @@
 # CSE476 Study Planner Agent (Topic T24)
 
-This project implements an agentic study planner with a custom plan-act loop in plain Python. It schedules study blocks around deadlines using the Google GenAI SDK.
+This project implements an agentic study planner with a custom plan-act loop in plain Python. It schedules study blocks around deadlines using the Groq API (specifically Llama-3.3-70b-versatile in JSON Mode).
 
 ### Tools Implemented
 The agent utilizes two tools written in pure Python:

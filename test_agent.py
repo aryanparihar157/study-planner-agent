@@ -1,33 +1,45 @@
 import os
 from state import StudyPlannerState
-from agent import run_agent, get_genai_client
+from agent import run_agent, get_groq_client
 
-# Define the Mock classes to simulate the LLM client without internet or API key
-class MockResponse:
-    def __init__(self, text):
-        self.text = text
+# Define Mock classes to simulate Groq API without internet or API key
+class MockMessage:
+    def __init__(self, content):
+        self.content = content
 
-class MockModels:
+class MockChoice:
+    def __init__(self, content):
+        self.message = MockMessage(content)
+
+class MockCompletion:
+    def __init__(self, content):
+        self.choices = [MockChoice(content)]
+
+class MockCompletions:
     def __init__(self, responses):
         self.responses = responses
         self.call_count = 0
         
-    def generate_content(self, model, contents, config=None):
+    def create(self, **kwargs):
         if self.call_count < len(self.responses):
-            res = MockResponse(self.responses[self.call_count])
+            res = MockCompletion(self.responses[self.call_count])
             self.call_count += 1
             return res
         else:
-            return MockResponse(
+            return MockCompletion(
                 '{"thought": "Default complete", "action": "final_answer", "message": "Planning complete."}'
             )
 
-class MockGenAIClient:
+class MockChat:
     def __init__(self, responses):
-        self.models = MockModels(responses)
+        self.completions = MockCompletions(responses)
+
+class MockGroqClient:
+    def __init__(self, responses):
+        self.chat = MockChat(responses)
 
 
-# Realistic JSON response sequence to simulate the Gemini API
+# Realistic JSON response sequence to simulate the Llama model on Groq
 MOCK_RESPONSES = [
     # Step 1: LLM decides to add the Physics Quiz
     '''{
@@ -72,7 +84,7 @@ MOCK_RESPONSES = [
 
 def test_agent_run():
     print("=" * 60)
-    print("      STUDY PLANNER AGENT RUN")
+    print("      STUDY PLANNER AGENT RUN (GROQ API)")
     print("=" * 60)
     
     # Initialize State starting on 2026-08-11
@@ -86,20 +98,20 @@ def test_agent_run():
     
     print(f"Goal: {goal}\n")
     
-    api_key = os.environ.get("GEMINI_API_KEY")
+    api_key = os.environ.get("GROQ_API_KEY")
     if api_key:
-        print("[System] GEMINI_API_KEY detected. Running with LIVE Gemini API...\n")
+        print("[System] GROQ_API_KEY detected. Running with LIVE Groq API...\n")
         try:
-            client = get_genai_client()
+            client = get_groq_client()
             final_ans, history = run_agent(goal, state, client)
         except Exception as e:
             print(f"[System] Live API execution failed: {e}. Falling back to simulation.")
-            client = MockGenAIClient(MOCK_RESPONSES)
+            client = MockGroqClient(MOCK_RESPONSES)
             final_ans, history = run_agent(goal, state, client)
     else:
-        print("[System] No GEMINI_API_KEY found in environment.")
-        print("[System] Running in SIMULATION MODE with Mock LLM...\n")
-        client = MockGenAIClient(MOCK_RESPONSES)
+        print("[System] No GROQ_API_KEY found in environment.")
+        print("[System] Running in SIMULATION MODE with Mock Groq Client...\n")
+        client = MockGroqClient(MOCK_RESPONSES)
         final_ans, history = run_agent(goal, state, client)
         
     print("=" * 60)

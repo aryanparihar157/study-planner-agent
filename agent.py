@@ -1,8 +1,7 @@
 import os
 import json
 import traceback
-from google import genai
-from google.genai import types
+from groq import Groq
 from state import StudyPlannerState
 import tools
 
@@ -12,18 +11,18 @@ TOOL_REGISTRY = {
     "build_schedule": tools.build_schedule
 }
 
-def get_genai_client(api_key: str = None) -> genai.Client:
+def get_groq_client(api_key: str = None) -> Groq:
     """
-    Initializes and returns a Google GenAI Client.
+    Initializes and returns a Groq Client.
     Will check for standard environmental variable if API key is not supplied.
     """
-    key = api_key or os.environ.get("GEMINI_API_KEY")
+    key = api_key or os.environ.get("GROQ_API_KEY")
     if not key:
         raise ValueError(
-            "GEMINI_API_KEY not found. Please set the environment variable "
-            "or pass it directly to get_genai_client(api_key='...')."
+            "GROQ_API_KEY not found. Please set the environment variable "
+            "or pass it directly to get_groq_client(api_key='...')."
         )
-    return genai.Client(api_key=key)
+    return Groq(api_key=key)
 
 
 def get_system_instruction() -> str:
@@ -75,7 +74,7 @@ Strict Rules:
 - You must output VALID JSON. No extra text, markdown formatting blocks around JSON, or explanation outside JSON.
 - If the user specifies tasks/deadlines, you must call `add_task` for each before calling `build_schedule`.
 - You must call `build_schedule` to generate the schedule structure before providing the `final_answer`.
-- Be agentic: Analyze deadlines, ensure study blocks are scheduled BEFORE the task's due date, and report any conflicts or capacity warnings.
+- Be agentic: Look at task deadlines, ensure study blocks are scheduled BEFORE the task's due date, and report any conflicts or capacity warnings.
 """
 
 
@@ -107,15 +106,15 @@ def format_agent_prompt(goal: str, state: StudyPlannerState) -> str:
     return prompt
 
 
-def run_agent(goal: str, state: StudyPlannerState, client: genai.Client, model: str = "gemini-2.5-flash", max_steps: int = 10) -> tuple:
+def run_agent(goal: str, state: StudyPlannerState, client: Groq, model: str = "llama-3.3-70b-versatile", max_steps: int = 10) -> tuple:
     """
-    Executes the custom plan-act loop.
+    Executes the custom plan-act loop using the Groq API.
     
     Args:
         goal (str): The user's input/planning objective.
         state (StudyPlannerState): Persistent state containing memory.
-        client (genai.Client): Google GenAI client.
-        model (str): Gemini model to use.
+        client (Groq): Groq API client.
+        model (str): Llama model on Groq to use.
         max_steps (int): Safety limit to prevent infinite tool-calling loops.
         
     Returns:
@@ -129,19 +128,19 @@ def run_agent(goal: str, state: StudyPlannerState, client: genai.Client, model: 
         prompt = format_agent_prompt(goal, state)
         
         try:
-            # 2. Call the LLM with system instruction and JSON mode config
-            response = client.models.generate_content(
+            # 2. Call the LLM (Groq) with system prompt and JSON mode config
+            response = client.chat.completions.create(
                 model=model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=get_system_instruction(),
-                    response_mime_type="application/json",
-                    temperature=0.0 # Keep outputs deterministic
-                )
+                messages=[
+                    {"role": "system", "content": get_system_instruction()},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.0 # Keep outputs deterministic
             )
             
             # 3. Parse LLM response as JSON
-            response_text = response.text.strip()
+            response_text = response.choices[0].message.content.strip()
             response_json = json.loads(response_text)
             
             thought = response_json.get("thought", "")
