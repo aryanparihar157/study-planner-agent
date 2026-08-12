@@ -1,5 +1,6 @@
 import os
 import json
+import sys
 from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -86,4 +87,9 @@ async def reset_state(start_date: Optional[str] = None):
     return {"status": "success", "state": state.to_dict()}
 
 # Mount static files to serve index.html, styles, and js
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+    static_dir = os.path.join(sys._MEIPASS, 'static')
+else:
+    static_dir = 'static'
+
+app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")

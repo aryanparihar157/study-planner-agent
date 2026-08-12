@@ -7,6 +7,31 @@ let currentState = {
     history: []
 };
 
+// LocalStorage Persistence Helpers
+function saveStateToLocalStorage() {
+    localStorage.setItem('study_planner_state', JSON.stringify(currentState));
+}
+
+function loadStateFromLocalStorage() {
+    const savedState = localStorage.getItem('study_planner_state');
+    if (savedState) {
+        try {
+            currentState = JSON.parse(savedState);
+            // Sync values to sidebar fields
+            elements.storedTasksCount.textContent = currentState.tasks.length;
+            elements.plannerStartDate.value = currentState.start_date;
+            elements.scheduleStartDate.textContent = currentState.start_date;
+            elements.maxHoursInput.value = currentState.max_study_hours_per_day;
+            // Render components
+            renderSchedule(currentState.schedule, getWarningsFromHistory(currentState.history));
+            renderTrace(currentState.history);
+        } catch (e) {
+            console.error("Failed to parse saved state:", e);
+        }
+    }
+}
+
+
 // DOM Elements
 const elements = {
     keyModal: document.getElementById('key-modal'),
@@ -42,6 +67,9 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.plannerStartDate.value = todayStr;
     elements.scheduleStartDate.textContent = todayStr;
     currentState.start_date = todayStr;
+
+    // Load State from LocalStorage if it exists
+    loadStateFromLocalStorage();
 
     // Check API Key
     checkApiKeySetup();
@@ -163,6 +191,7 @@ async function resetSessionState() {
         const data = await response.json();
         if (data.status === 'success') {
             currentState = data.state;
+            saveStateToLocalStorage();
             elements.storedTasksCount.textContent = '0';
             renderSchedule({}, []);
             renderTrace([]);
@@ -232,6 +261,7 @@ async function executeAgentAction() {
         if (result.status === 'success') {
             // Update State
             currentState = result.state;
+            saveStateToLocalStorage();
             
             // Render components
             elements.storedTasksCount.textContent = currentState.tasks.length;
