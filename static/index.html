@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Planner Agent</title>
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation & Controls -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <i class="fa-solid fa-graduation-cap logo-icon"></i>
+                <div class="logo-text">
+                    <h1>PlanAgent</h1>
+                    <span>Study Planner</span>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Session Memory</h3>
+                <div class="state-stats">
+                    <div class="stat-card">
+                        <span class="stat-label"><i class="fa-solid fa-list-check"></i> Tasks Stored</span>
+                        <span class="stat-value" id="stored-tasks-count">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label"><i class="fa-solid fa-calendar-day"></i> Start Date</span>
+                        <span class="stat-value" id="schedule-start-date">2026-08-11</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Configuration</h3>
+                <div class="form-group">
+                    <label for="max-hours"><i class="fa-solid fa-clock"></i> Daily Study Cap (h)</label>
+                    <input type="number" id="max-hours" value="4" min="1" max="12" step="0.5" class="input-field">
+                </div>
+                <div class="form-group">
+                    <label for="planner-start-date"><i class="fa-solid fa-calendar-plus"></i> Set Start Date</label>
+                    <input type="date" id="planner-start-date" class="input-field">
+                </div>
+            </div>
+
+            <div class="sidebar-actions">
+                <button id="btn-change-key" class="btn btn-secondary">
+                    <i class="fa-solid fa-key"></i> API Key Settings
+                </button>
+                <button id="btn-reset" class="btn btn-danger">
+                    <i class="fa-solid fa-rotate-left"></i> Reset Memory
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="dashboard-header">
+                <div class="header-title">
+                    <h2>Agentic Study Dashboard</h2>
+                    <p>Orchestrate study blocks autonomously with Llama 3.3 plan-act loops</p>
+                </div>
+                <div class="api-status" id="api-status-indicator">
+                    <span class="status-pill status-offline"><i class="fa-solid fa-circle"></i> Offline Mode</span>
+                </div>
+            </header>
+
+            <!-- Dashboard Grid -->
+            <div class="dashboard-grid">
+                <!-- Planning Inputs & Action Panel -->
+                <div class="card planning-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-wand-magic-sparkles"></i> Prompt the Agent</h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="description">Enter your classes, homeworks, exams, and their deadlines. The agent will run a multi-step loop calling Python tools, store them, and construct the study schedule before due dates.</p>
+                        <div class="form-group">
+                            <textarea id="agent-goal" placeholder="Example: I have a Math Exam on 2026-08-14 (needs 6h study), History Homework due 2026-08-13 (needs 2h), and Physics Quiz due 2026-08-12. Please schedule study slots." class="textarea-field"></textarea>
+                        </div>
+                        <div class="planning-controls">
+                            <div class="form-group inline-group">
+                                <label for="llm-model">Model:</label>
+                                <select id="llm-model" class="select-field">
+                                    <option value="llama-3.3-70b-versatile">llama-3.3-70b (Recommended)</option>
+                                    <option value="llama-3-8b-8192">llama-3-8b-8192 (Fast)</option>
+                                </select>
+                            </div>
+                            <div class="form-group inline-group checkbox-group">
+                                <input type="checkbox" id="chk-simulation" checked>
+                                <label for="chk-simulation">Simulation Mode (No Key Needed)</label>
+                            </div>
+                            <button id="btn-execute" class="btn btn-primary">
+                                <span id="execute-btn-text"><i class="fa-solid fa-play"></i> Execute Agent</span>
+                                <span id="execute-btn-loading" class="hidden"><i class="fa-solid fa-spinner fa-spin"></i> Agent Thinking...</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Generated Study Schedule Visualizer -->
+                <div class="card schedule-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-calendar-week"></i> Generated Study Schedule</h3>
+                    </div>
+                    <div class="card-body schedule-body" id="schedule-container">
+                        <div class="empty-state">
+                            <i class="fa-regular fa-calendar-plus empty-icon"></i>
+                            <p>No study blocks scheduled yet. Prompt the agent to generate your schedule.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agent Execution Trace Console (Real-time logs) -->
+                <div class="card trace-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-terminal"></i> Plan-Act Loop Execution Trace</h3>
+                        <span class="trace-badge" id="trace-steps-badge">0 steps</span>
+                    </div>
+                    <div class="card-body trace-body" id="trace-container">
+                        <div class="empty-state">
+                            <i class="fa-solid fa-code empty-icon"></i>
+                            <p>Agent trace will appear here showing thoughts, tool calls, and observations.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Glassmorphic API Key Modal -->
+    <div id="key-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-shield-halved"></i> Secure API Settings</h2>
+            </div>
+            <div class="modal-body">
+                <p>This application calls the Groq API for planning. Enter your Groq API Key below. The key is saved safely in your browser's local storage and is sent securely in HTTP headers. It is never stored on the server.</p>
+                <div class="form-group">
+                    <label for="groq-api-key">Groq API Key</label>
+                    <div class="input-password-wrapper">
+                        <input type="password" id="groq-api-key" placeholder="gsk_************************************" class="input-field">
+                        <button type="button" id="toggle-key-visibility" class="btn-toggle"><i class="fa-solid fa-eye"></i></button>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="btn-use-sim" class="btn btn-secondary">Use Simulation Mode</button>
+                    <button id="btn-save-key" class="btn btn-primary">Save Key & Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
