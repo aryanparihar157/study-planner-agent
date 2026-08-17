@@ -14,20 +14,39 @@ class StudyPlannerState:
         # Default start date to today's ISO date
         self.start_date = start_date or datetime.date.today().isoformat()
         self.max_study_hours_per_day = max_study_hours_per_day
-        self.tasks = []      # List of dicts: {"name": str, "due": str, "hours_required": float}
-        self.schedule = {}   # Dictionary of YYYY-MM-DD -> list of dicts: {"task": str, "hours": float}
-        self.history = []    # Trace of agent plan-act loop iterations: [{"step": int, "action": dict, "observation": str}]
+        self.tasks = []      # List of structured StudyTask dicts
+        self.schedule = {}   # Dictionary of YYYY-MM-DD -> list of dicts: {"task": str, "hours": float, ...}
+        self.history = []    # Trace of agent plan-act loop iterations
 
-    def add_task_to_state(self, name: str, due: str, hours_required: float = 3.0):
-        """Helper method to append a task directly to the state."""
+    def add_task_to_state(
+        self,
+        id: str,
+        title: str,
+        subject: str,
+        taskType: str,
+        deadline: str or None,
+        estimatedHours: float,
+        durationSource: str,
+        deadlineSource: str,
+        priority: str,
+        notes: str = None
+    ):
+        """Helper method to append a structured task directly to the state."""
         self.tasks.append({
-            "name": name,
-            "due": due,
-            "hours_required": hours_required
+            "id": id,
+            "title": title,
+            "subject": subject,
+            "taskType": taskType,
+            "deadline": deadline,
+            "estimatedHours": float(estimatedHours),
+            "durationSource": durationSource,
+            "deadlineSource": deadlineSource,
+            "priority": priority,
+            "notes": notes
         })
 
     def to_dict(self) -> dict:
-        """Serializes the state to a plain dictionary (useful for printing or prompting the LLM)."""
+        """Serializes the state to a plain dictionary (useful for prompting the LLM)."""
         return {
             "start_date": self.start_date,
             "max_study_hours_per_day": self.max_study_hours_per_day,

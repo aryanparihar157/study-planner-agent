@@ -9,8 +9,7 @@ from typing import Optional, Dict, Any, List
 
 from state import StudyPlannerState
 from agent import run_agent, get_groq_client
-# Import mock clients from test_agent for simulation mode
-from test_agent import MockGroqClient, MOCK_RESPONSES
+from test_agent import MockGroqClient
 
 app = FastAPI(title="Study Planner Agent Dashboard")
 
@@ -24,11 +23,47 @@ class PlanRequest(BaseModel):
     model: Optional[str] = "llama-3.3-70b-versatile"
     simulation: Optional[bool] = False
 
-# Groq responses for Goal 2 in mock mode
-MOCK_RESPONSES_GOAL_2 = [
-    '{"thought": "I need to add the new Chemistry Lab task which is due tomorrow on 2026-08-12.", "action": "call_tool", "tool_name": "add_task", "tool_args": {"name": "Chemistry Lab", "due": "2026-08-12"}}',
-    '{"thought": "Now that the Chemistry Lab is added alongside the existing Math, History, and Physics tasks, I must rebuild the schedule.", "action": "call_tool", "tool_name": "build_schedule", "tool_args": {}}',
-    '{"thought": "The schedule rebuild was successful. Let\'s report the new plan and note that because of the new urgent deadline, we have a capacity warning.", "action": "final_answer", "message": "Re-planning complete! Here is your updated study plan:\\n\\n- **2026-08-11 (Day 1)**:\\n  * Physics Quiz (2.0 hours) - due tomorrow\\n  * Chemistry Lab (2.0 hours) - due tomorrow\\n  *(Note: Day 1 capacity of 4 hours is fully hit; History Homework has been shifted to Day 2)*\\n\\n- **2026-08-12 (Day 2)**:\\n  * History Homework (2.0 hours) - due 2026-08-13\\n  * Math Exam (2.0 hours) - study block 1\\\\n\\n- **2026-08-13 (Day 3)**:\\n  * Math Exam (4.0 hours) - study block 2\\n\\n**Warnings / Capacity Conflicts:**\\n- Warning: Could only schedule 4.0 of 6.0 hours for \'Math Exam\' because Day 1 and Day 2 capacities were filled with closer deadlines. Please consider extending study hours or asking for a Math extension."}'
+# Simulation Mock Response Lists for the 5 Scenarios
+MOCK_SCENARIO_1 = [
+    '{"thought": "Extracting Data Structures midterm details.", "action": "call_tool", "tool_name": "add_task", "tool_args": {"title": "Data Structures midterm", "subject": "DSA", "taskType": "exam", "deadline": "2026-08-23", "estimatedHours": 10.0, "durationSource": "user_provided", "deadlineSource": "user_provided", "priority": "high"}}',
+    '{"thought": "Extracting DBMS assignment details.", "action": "call_tool", "tool_name": "add_task", "tool_args": {"title": "DBMS assignment", "subject": "DBMS", "taskType": "assignment", "deadline": "2026-08-20", "estimatedHours": 4.0, "durationSource": "user_provided", "deadlineSource": "user_provided", "priority": "medium"}}',
+    '{"thought": "Extracting Operating Systems quiz details.", "action": "call_tool", "tool_name": "add_task", "tool_args": {"title": "Operating Systems quiz", "subject": "OS", "taskType": "quiz", "deadline": "2026-08-21", "estimatedHours": 3.0, "durationSource": "user_provided", "deadlineSource": "user_provided", "priority": "medium"}}',
+    '{"thought": "Building schedule.", "action": "call_tool", "tool_name": "build_schedule", "tool_args": {}}',
+    '{"thought": "Generating final answer.", "action": "final_answer", "message": "What I understood:\\n- Data Structures midterm: due 2026-08-23 (10h requested)\\n- DBMS assignment: due 2026-08-20 (4h requested)\\n- Operating Systems quiz: due 2026-08-21 (3h requested)\\n\\nAssumptions:\\n- All durations and deadlines were explicitly provided by the user."}'
+]
+
+MOCK_SCENARIO_2 = [
+    '{"thought": "Adding Math Exam task with inferred deadline and default hours.", "action": "call_tool", "tool_name": "add_task", "tool_args": {"title": "Math exam", "subject": "Math", "taskType": "exam", "deadline": "2026-08-24", "estimatedHours": 6.0, "durationSource": "estimated", "deadlineSource": "inferred", "priority": "high"}}',
+    '{"thought": "Adding assignment with inferred deadline and default hours.", "action": "call_tool", "tool_name": "add_task", "tool_args": {"title": "Assignment", "subject": "General Study", "taskType": "assignment", "deadline": "2026-08-19", "estimatedHours": 3.0, "durationSource": "estimated", "deadlineSource": "inferred", "priority": "medium"}}',
+    '{"thought": "Generating schedule.", "action": "call_tool", "tool_name": "build_schedule", "tool_args": {}}',
+    '{"thought": "Generating final answer.", "action": "final_answer", "message": "What I understood:\\n- Math exam: due 2026-08-24 (6h estimated)\\n- General assignment: due 2026-08-19 (3h estimated)\\n\\nAssumptions:\\n- Inferred Math exam deadline to next week (2026-08-24) and estimated 6 hours of study.\\n- Inferred assignment deadline to 2026-08-19 (2 days) and estimated 3 hours of study."}'
+]
+
+MOCK_SCENARIO_3 = [
+    '{"thought": "Adding DBMS assignment with tomorrow\'s date.", "action": "call_tool", "tool_name": "add_task", "tool_args": {"title": "DBMS assignment", "subject": "DBMS", "taskType": "assignment", "deadline": "2026-08-18", "estimatedHours": 3.0, "durationSource": "estimated", "deadlineSource": "inferred", "priority": "medium"}}',
+    '{"thought": "Adding physics quiz with Friday\'s date.", "action": "call_tool", "tool_name": "add_task", "tool_args": {"title": "Physics quiz", "subject": "Physics", "taskType": "quiz", "deadline": "2026-08-21", "estimatedHours": 2.0, "durationSource": "estimated", "deadlineSource": "inferred", "priority": "medium"}}',
+    '{"thought": "Generating schedule.", "action": "call_tool", "tool_name": "build_schedule", "tool_args": {}}',
+    '{"thought": "Generating final answer.", "action": "final_answer", "message": "What I understood:\\n- DBMS assignment: due 2026-08-18 (3h estimated)\\n- Physics quiz: due 2026-08-21 (2h estimated)\\n\\nAssumptions:\\n- Inferred DBMS assignment deadline to tomorrow (2026-08-18) with 3 hours estimated.\\n- Inferred Physics quiz deadline to Friday (2026-08-21) with 2 hours estimated."}'
+]
+
+MOCK_SCENARIO_4 = [
+    '{"thought": "Adding DSA revision task with no deadline.", "action": "call_tool", "tool_name": "add_task", "tool_args": {"title": "DSA revision", "subject": "DSA", "taskType": "revision", "deadline": null, "estimatedHours": 2.0, "durationSource": "estimated", "deadlineSource": "missing", "priority": "medium"}}',
+    '{"thought": "Adding DBMS revision task.", "action": "call_tool", "tool_name": "add_task", "tool_args": {"title": "DBMS revision", "subject": "DBMS", "taskType": "revision", "deadline": null, "estimatedHours": 2.0, "durationSource": "estimated", "deadlineSource": "missing", "priority": "medium"}}',
+    '{"thought": "Adding OS revision task.", "action": "call_tool", "tool_name": "add_task", "tool_args": {"title": "OS revision", "subject": "OS", "taskType": "revision", "deadline": null, "estimatedHours": 2.0, "durationSource": "estimated", "deadlineSource": "missing", "priority": "medium"}}',
+    '{"thought": "Generating schedule.", "action": "call_tool", "tool_name": "build_schedule", "tool_args": {}}',
+    '{"thought": "Generating final answer.", "action": "final_answer", "message": "What I understood:\\n- DSA revision (2h estimated, no deadline)\\n- DBMS revision (2h estimated, no deadline)\\n- OS revision (2h estimated, no deadline)\\n\\nAssumptions:\\n- Estimated 2 hours for each revision task. Since no deadlines were provided, they have been scheduled in the earliest available slots."}'
+]
+
+MOCK_SCENARIO_5 = [
+    '{"thought": "Adding Exam preparation with tomorrow\'s deadline.", "action": "call_tool", "tool_name": "add_task", "tool_args": {"title": "Exam preparation", "subject": "General Study", "taskType": "exam", "deadline": "2026-08-18", "estimatedHours": 12.0, "durationSource": "user_provided", "deadlineSource": "inferred", "priority": "high"}}',
+    '{"thought": "Generating schedule.", "action": "call_tool", "tool_name": "build_schedule", "tool_args": {}}',
+    '{"thought": "Generating final answer.", "action": "final_answer", "message": "What I understood:\\n- Exam preparation: due 2026-08-18 (12h requested)\\n\\nAssumptions:\\n- Inferred exam deadline to tomorrow (2026-08-18).\\n\\nWarnings:\\n- There is an impossible workload conflict! 12 hours cannot fit into a single day before the deadline with your 4-hour daily cap."}'
+]
+
+MOCK_DEFAULT = [
+    '{"thought": "Adding generic task.", "action": "call_tool", "tool_name": "add_task", "tool_args": {"title": "Study session", "subject": "General Study", "taskType": "general_study", "estimatedHours": 2.0, "priority": "medium"}}',
+    '{"thought": "Rebuilding schedule.", "action": "call_tool", "tool_name": "build_schedule", "tool_args": {}}',
+    '{"thought": "Final answer.", "action": "final_answer", "message": "What I understood:\\n- Study session (2h estimated)\\n\\nAssumptions:\\n- Assigned default hours for general study session."}'
 ]
 
 @app.post("/api/plan")
@@ -43,14 +78,22 @@ async def plan_schedule(
         
     # 2. Configure Client (Live or Simulation)
     if req.simulation or x_groq_api_key == "mock":
-        # Determine mock response set based on history length (first goal vs second re-planning goal)
-        if len(state.tasks) > 0:
-            mock_responses = MOCK_RESPONSES_GOAL_2
+        goal_lower = req.goal.lower()
+        if "midterm" in goal_lower or "data structures" in goal_lower:
+            mock_responses = MOCK_SCENARIO_1
+        elif "math exam next week" in goal_lower or "casual incomplete" in goal_lower:
+            mock_responses = MOCK_SCENARIO_2
+        elif "tomorrow i need to finish" in goal_lower or "physics quiz this friday" in goal_lower:
+            mock_responses = MOCK_SCENARIO_3
+        elif "revise dsa" in goal_lower or "timetable" in goal_lower:
+            mock_responses = MOCK_SCENARIO_4
+        elif "12 hours" in goal_lower or "exam tomorrow" in goal_lower:
+            mock_responses = MOCK_SCENARIO_5
         else:
-            mock_responses = MOCK_RESPONSES
+            mock_responses = MOCK_DEFAULT
+            
         client = MockGroqClient(mock_responses)
     else:
-        # Use provided header or environment key
         api_key = x_groq_api_key or os.environ.get("GROQ_API_KEY")
         if not api_key:
             raise HTTPException(
@@ -64,7 +107,6 @@ async def plan_schedule(
 
     # 3. Run Agent Loop
     try:
-        # Intercept output trace printings and log execution steps
         final_answer, history = run_agent(
             goal=req.goal,
             state=state,
@@ -82,7 +124,6 @@ async def plan_schedule(
 
 @app.post("/api/reset")
 async def reset_state(start_date: Optional[str] = None):
-    # Returns a fresh state dictionary
     state = StudyPlannerState(start_date=start_date)
     return {"status": "success", "state": state.to_dict()}
 
@@ -101,7 +142,6 @@ async def list_models(x_groq_api_key: Optional[str] = Header(None)):
         from groq import Groq
         client = Groq(api_key=x_groq_api_key)
         models_data = client.models.list()
-        # Sort and return model IDs
         model_ids = sorted([m.id for m in models_data.data])
         return {"models": model_ids}
     except Exception as e:

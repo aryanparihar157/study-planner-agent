@@ -415,6 +415,48 @@ function renderSchedule(schedule, warnings) {
         });
         elements.scheduleContainer.appendChild(warningsDiv);
     }
+
+    // Helper to find the final answer message from the execution trace
+    function getFinalAnswerFromHistory(history) {
+        if (!history) return null;
+        for (let i = history.length - 1; i >= 0; i--) {
+            const step = history[i];
+            if (step && step.action && step.action.action === 'final_answer') {
+                return step.action.message;
+            }
+        }
+        return null;
+    }
+
+    // Render friendly summary and assumptions at the top if it exists
+    const finalAnswer = getFinalAnswerFromHistory(currentState.history);
+    if (finalAnswer) {
+        const summaryCard = document.createElement('div');
+        summaryCard.className = 'agent-summary-box';
+        summaryCard.style.background = 'rgba(255, 255, 255, 0.03)';
+        summaryCard.style.borderLeft = '4px solid var(--accent-color)';
+        summaryCard.style.padding = '14px 16px';
+        summaryCard.style.borderRadius = '8px';
+        summaryCard.style.marginBottom = '20px';
+        summaryCard.style.fontSize = '13.5px';
+        summaryCard.style.lineHeight = '1.6';
+        summaryCard.style.color = '#e2e8f0';
+        summaryCard.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+
+        // Simple formatting helper for newlines and bullet points
+        let formatted = finalAnswer
+            .replace(/\n/g, '<br>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/-\s(.*?)(?:<br>|$)/g, '<li>$1</li>');
+            
+        summaryCard.innerHTML = `
+            <div style="font-weight: 600; margin-bottom: 8px; color: var(--accent-color); display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-brain"></i> Agent Summary & Planning Notes
+            </div>
+            <div>${formatted}</div>
+        `;
+        elements.scheduleContainer.appendChild(summaryCard);
+    }
     
     const dates = Object.keys(schedule);
     if (dates.length === 0) {
