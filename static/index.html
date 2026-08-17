@@ -102,6 +102,39 @@
                                 <span id="execute-btn-loading" class="hidden"><i class="fa-solid fa-spinner fa-spin"></i> Agent Thinking...</span>
                             </button>
                         </div>
+                        
+                        <!-- Interactive Clarification Panel -->
+                        <div id="interactive-clarification-form" class="interactive-form hidden">
+                            <div class="form-divider"></div>
+                            <h4><i class="fa-solid fa-circle-question"></i> Agent Clarification Panel</h4>
+                            <p id="clarification-question-text" class="clarification-message">The agent needs more information to build your study plan.</p>
+                            
+                            <div class="interactive-sections">
+                                <!-- Study Limit Selector -->
+                                <div class="form-group interactive-group" id="interactive-hours-section">
+                                    <label>Daily Study Limit:</label>
+                                    <div class="hours-options">
+                                        <button class="btn-hour-opt" type="button" data-hours="1">1 Hour</button>
+                                        <button class="btn-hour-opt" type="button" data-hours="2">2 Hours</button>
+                                        <button class="btn-hour-opt" type="button" data-hours="3">3 Hours</button>
+                                        <button class="btn-hour-opt" type="button" data-hours="4">4 Hours</button>
+                                        <div class="custom-hours-input">
+                                            <input type="number" id="interactive-custom-hours" min="1" max="12" placeholder="Custom h">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Deadline Selectors (rendered dynamically) -->
+                                <div class="form-group interactive-group" id="interactive-deadlines-section">
+                                    <label>Confirm Task Due Dates:</label>
+                                    <div id="interactive-deadlines-list" class="deadlines-list"></div>
+                                </div>
+                            </div>
+                            
+                            <button id="btn-submit-clarification" class="btn btn-success mt-4" type="button">
+                                <i class="fa-solid fa-check"></i> Submit Answers to Agent
+                            </button>
+                        </div>
                     </div>
                 </div>
 

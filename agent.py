@@ -195,11 +195,16 @@ def run_agent(goal: str, state: StudyPlannerState, client: Groq, model: str = "l
                 
             elif action == "ask_user":
                 message = response_json.get("message", "")
+                missing_params = response_json.get("missing_parameters", None)
                 # The agent needs more input, so it halts the loop and talks to the user
                 state.history.append({
                     "step": step_count,
                     "thought": thought,
-                    "action": {"action": action, "message": message},
+                    "action": {
+                        "action": action,
+                        "message": message,
+                        "missing_parameters": missing_params
+                    },
                     "observation": "Waiting for user input."
                 })
                 print(f"[Step {step_count}] Agent asks user: {message}\n")

@@ -78,7 +78,16 @@ const elements = {
     apiStatusIndicator: document.getElementById('api-status-indicator'),
     scheduleContainer: document.getElementById('schedule-container'),
     traceContainer: document.getElementById('trace-container'),
-    traceStepsBadge: document.getElementById('trace-steps-badge')
+    traceStepsBadge: document.getElementById('trace-steps-badge'),
+    
+    // Interactive clarification form elements
+    interactiveForm: document.getElementById('interactive-clarification-form'),
+    clarificationText: document.getElementById('clarification-question-text'),
+    btnSubmitClarification: document.getElementById('btn-submit-clarification'),
+    interactiveHoursSection: document.getElementById('interactive-hours-section'),
+    interactiveDeadlinesSection: document.getElementById('interactive-deadlines-section'),
+    interactiveDeadlinesList: document.getElementById('interactive-deadlines-list'),
+    interactiveCustomHours: document.getElementById('interactive-custom-hours')
 };
 
 // Initialize Application
@@ -132,6 +141,22 @@ function setupEventListeners() {
     
     // Checkbox Simulation logic: toggle indicator
     elements.chkSimulation.addEventListener('change', updateApiIndicator);
+
+    // Setup event listeners for interactive hour option buttons
+    document.querySelectorAll('.btn-hour-opt').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.btn-hour-opt').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            elements.interactiveCustomHours.value = ''; // clear custom
+        });
+    });
+
+    elements.interactiveCustomHours.addEventListener('input', () => {
+        // Clear active buttons if custom value is typed
+        document.querySelectorAll('.btn-hour-opt').forEach(b => b.classList.remove('active'));
+    });
+
+    elements.btnSubmitClarification.addEventListener('click', submitClarificationAnswers);
 }
 
 // API Key Storage Logic
@@ -308,13 +333,20 @@ async function executeAgentAction() {
                 elements.agentGoal.value = '';
                 elements.agentGoal.placeholder = "Respond to the agent: " + lastStep.action.message;
                 sendBrowserNotification("Study Planner - Clarification Required", lastStep.action.message);
-            } else if (lastStep && lastStep.action.action === 'final_answer') {
-                elements.agentGoal.value = '';
-                elements.agentGoal.placeholder = "What is your next study planning goal?";
-                if (warnings.length > 0) {
-                    sendBrowserNotification("Study Planner - Capacity Alert", "Schedule generated with capacity conflicts! Check warning details.");
-                } else {
-                    sendBrowserNotification("Study Planner - Success", "Your study schedule has been successfully updated!");
+                
+                // Show interactive clarification panel if structured missing parameters exist
+                showInteractiveClarification(lastStep.action);
+            } else {
+                // Hide clarification panel if planning is complete
+                elements.interactiveForm.classList.add('hidden');
+                if (lastStep && lastStep.action.action === 'final_answer') {
+                    elements.agentGoal.value = '';
+                    elements.agentGoal.placeholder = "What is your next study planning goal?";
+                    if (warnings.length > 0) {
+                        sendBrowserNotification("Study Planner - Capacity Alert", "Schedule generated with capacity conflicts! Check warning details.");
+                    } else {
+                        sendBrowserNotification("Study Planner - Success", "Your study schedule has been successfully updated!");
+                    }
                 }
             }
         }
@@ -498,4 +530,112 @@ function renderTrace(history) {
     
     // Auto Scroll to bottom of trace
     elements.traceContainer.scrollTop = elements.traceContainer.scrollHeight;
+}
+
+// Show interactive clarification panel
+function showInteractiveClarification(action) {
+    const missing = action.missing_parameters;
+    
+    // If no missing parameters structure exists, fallback to standard textarea typing
+    if (!missing) {
+        elements.interactiveForm.classList.add('hidden');
+        return;
+    }
+
+    elements.clarificationText.textContent = action.message;
+    
+    // Toggle study hours section
+    if (missing.daily_study_hours) {
+        elements.interactiveHoursSection.classList.remove('hidden');
+        // Reset selections
+        document.querySelectorAll('.btn-hour-opt').forEach(b => b.classList.remove('active'));
+        elements.interactiveCustomHours.value = '';
+        // Pre-select button based on current state (e.g. if state has 4, pre-select 4)
+        const currentCapStr = Math.round(currentState.max_study_hours_per_day).toString();
+        const preselectBtn = document.querySelector(`.btn-hour-opt[data-hours="${currentCapStr}"]`);
+        if (preselectBtn) {
+            preselectBtn.classList.add('active');
+        }
+    } else {
+        elements.interactiveHoursSection.classList.add('hidden');
+    }
+
+    // Toggle deadlines list
+    if (missing.tasks && missing.tasks.length > 0) {
+        elements.interactiveDeadlinesSection.classList.remove('hidden');
+        elements.interactiveDeadlinesList.innerHTML = '';
+        
+        missing.tasks.forEach(task => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'deadline-item';
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = task.name;
+            
+            const dateInput = document.createElement('input');
+            dateInput.type = 'date';
+            dateInput.className = 'interactive-deadline-date';
+            dateInput.dataset.taskName = task.name;
+            // Set date to estimated due date from agent
+            dateInput.value = task.estimated_due;
+            
+            itemDiv.appendChild(nameSpan);
+            itemDiv.appendChild(dateInput);
+            elements.interactiveDeadlinesList.appendChild(itemDiv);
+        });
+    } else {
+        elements.interactiveDeadlinesSection.classList.add('hidden');
+        elements.interactiveDeadlinesList.innerHTML = '';
+    }
+
+    // Unhide the panel
+    elements.interactiveForm.classList.remove('hidden');
+    
+    // Smoothly scroll to the clarification form
+    elements.interactiveForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// Collect interactive fields and resubmit to agent
+function submitClarificationAnswers() {
+    // 1. Get chosen study limit
+    let studyHours = null;
+    const activeBtn = document.querySelector('.btn-hour-opt.active');
+    if (activeBtn) {
+        studyHours = activeBtn.dataset.hours;
+    } else {
+        studyHours = elements.interactiveCustomHours.value.trim();
+    }
+
+    // 2. Get task due dates
+    const deadlineInputs = document.querySelectorAll('.interactive-deadline-date');
+    const confirmedTasks = [];
+    deadlineInputs.forEach(input => {
+        const taskName = input.dataset.taskName;
+        const taskDate = input.value;
+        confirmedTasks.push({ name: taskName, due: taskDate });
+    });
+
+    // 3. Construct text response for the agent
+    let promptParts = [];
+    if (studyHours) {
+        promptParts.push(`I can dedicate ${studyHours} hours daily to study.`);
+    }
+    if (confirmedTasks.length > 0) {
+        const taskStrings = confirmedTasks.map(t => `"${t.name}" is due on ${t.due}`);
+        promptParts.push(`Here are the due dates: ${taskStrings.join(', ')}.`);
+    } else {
+        promptParts.push(`Please proceed with the plan.`);
+    }
+
+    const followUpPrompt = promptParts.join(' ');
+
+    // 4. Set prompt, hide form, and execute agent!
+    elements.agentGoal.value = followUpPrompt;
+    elements.interactiveForm.classList.add('hidden');
+    
+    // Clear dynamic lists
+    elements.interactiveDeadlinesList.innerHTML = '';
+    
+    // Trigger planning execution
+    executeAgentAction();
 }

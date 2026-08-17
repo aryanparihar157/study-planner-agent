@@ -710,3 +710,150 @@ body {
         grid-row: auto;
     }
 }
+
+/* Interactive Clarification Panel Styles */
+.interactive-form {
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(124, 77, 255, 0.03);
+    border: 1px dashed rgba(124, 77, 255, 0.3);
+    border-radius: 12px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.form-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(124, 77, 255, 0.3), transparent);
+    margin-bottom: 16px;
+}
+
+.interactive-form h4 {
+    font-size: 14px;
+    color: var(--primary-color);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.clarification-message {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 8px;
+    border-left: 3px solid var(--primary-color);
+}
+
+.interactive-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.hours-options {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.btn-hour-opt {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--card-border);
+    color: var(--text-primary);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.btn-hour-opt:hover {
+    background: rgba(124, 77, 255, 0.15);
+    border-color: var(--primary-color);
+}
+
+.btn-hour-opt.active {
+    background: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 0 12px var(--primary-glow);
+    border-color: var(--primary-color);
+}
+
+.custom-hours-input input {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--card-border);
+    color: var(--text-primary);
+    padding: 7px 10px;
+    border-radius: 6px;
+    width: 90px;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.custom-hours-input input:focus {
+    border-color: var(--primary-color);
+}
+
+.deadlines-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.deadline-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+    gap: 12px;
+}
+
+.deadline-item span {
+    font-size: 12px;
+    color: var(--text-primary);
+    font-weight: 500;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.deadline-item input[type="date"] {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--card-border);
+    color: var(--text-primary);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    outline: none;
+    color-scheme: dark;
+}
+
+.btn-success {
+    background: var(--success-color);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(0, 230, 118, 0.2);
+}
+
+.btn-success:hover {
+    background: #00c853;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 230, 118, 0.4);
+}
+
+.btn-success:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
