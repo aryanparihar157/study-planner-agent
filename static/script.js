@@ -104,6 +104,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check API Key
     checkApiKeySetup();
     
+    // Load dynamically available models from the key
+    loadAvailableModels();
+    
     // Add Event Listeners
     setupEventListeners();
 
@@ -140,7 +143,10 @@ function setupEventListeners() {
     elements.btnExecute.addEventListener('click', executeAgentAction);
     
     // Checkbox Simulation logic: toggle indicator
-    elements.chkSimulation.addEventListener('change', updateApiIndicator);
+    elements.chkSimulation.addEventListener('change', () => {
+        updateApiIndicator();
+        loadAvailableModels();
+    });
 
     // Setup event listeners for interactive hour option buttons
     document.querySelectorAll('.btn-hour-opt').forEach(btn => {
@@ -201,6 +207,7 @@ function saveApiKey() {
     elements.chkSimulation.checked = false;
     showModal(false);
     updateApiIndicator();
+    loadAvailableModels();
 }
 
 function useSimulationMode() {
@@ -208,6 +215,7 @@ function useSimulationMode() {
     elements.chkSimulation.checked = true;
     showModal(false);
     updateApiIndicator();
+    loadAvailableModels();
 }
 
 function toggleKeyVisibility() {
@@ -638,4 +646,57 @@ function submitClarificationAnswers() {
     
     // Trigger planning execution
     executeAgentAction();
+}
+
+async function loadAvailableModels() {
+    const isSim = elements.chkSimulation.checked;
+    const apiKey = localStorage.getItem('groq_api_key');
+    
+    const headers = {};
+    if (!isSim && apiKey) {
+        headers['X-Groq-API-Key'] = apiKey;
+    } else {
+        headers['X-Groq-API-Key'] = 'mock';
+    }
+
+    try {
+        const response = await fetch('/api/models', { headers });
+        if (!response.ok) {
+            throw new Error("Failed to fetch available models.");
+        }
+        const data = await response.json();
+        if (data.models && data.models.length > 0) {
+            const selectEl = elements.llmModel;
+            const currentSelected = selectEl.value;
+            
+            // Clear existing options
+            selectEl.innerHTML = '';
+            
+            data.models.forEach(modelId => {
+                const opt = document.createElement('option');
+                opt.value = modelId;
+                
+                // Friendly label formatting
+                let label = modelId;
+                if (modelId === 'llama-3.3-70b-versatile') label += ' (Recommended)';
+                else if (modelId === 'llama-3.3-70b-specdec') label += ' (Speculative)';
+                else if (modelId === 'llama-3.1-8b-instant') label += ' (Fast)';
+                
+                opt.textContent = label;
+                selectEl.appendChild(opt);
+            });
+            
+            // Restore selection if previously selected model is still available,
+            // otherwise select first item or default versatile model
+            if (data.models.includes(currentSelected)) {
+                selectEl.value = currentSelected;
+            } else if (data.models.includes('llama-3.3-70b-versatile')) {
+                selectEl.value = 'llama-3.3-70b-versatile';
+            } else {
+                selectEl.value = data.models[0];
+            }
+        }
+    } catch (e) {
+        console.error("Error loading available models:", e);
+    }
 }

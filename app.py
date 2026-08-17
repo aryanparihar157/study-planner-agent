@@ -86,6 +86,27 @@ async def reset_state(start_date: Optional[str] = None):
     state = StudyPlannerState(start_date=start_date)
     return {"status": "success", "state": state.to_dict()}
 
+@app.get("/api/models")
+async def list_models(x_groq_api_key: Optional[str] = Header(None)):
+    if not x_groq_api_key or x_groq_api_key == "mock":
+        return {
+            "models": [
+                "llama-3.3-70b-versatile",
+                "llama-3.3-70b-specdec",
+                "llama-3.1-8b-instant",
+                "llama3-8b-8192"
+            ]
+        }
+    try:
+        from groq import Groq
+        client = Groq(api_key=x_groq_api_key)
+        models_data = client.models.list()
+        # Sort and return model IDs
+        model_ids = sorted([m.id for m in models_data.data])
+        return {"models": model_ids}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 # Mount static files to serve index.html, styles, and js
 if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
     static_dir = os.path.join(sys._MEIPASS, 'static')
