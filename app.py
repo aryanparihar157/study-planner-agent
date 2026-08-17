@@ -20,7 +20,7 @@ os.makedirs("static", exist_ok=True)
 class PlanRequest(BaseModel):
     goal: str
     state: Optional[Dict[str, Any]] = None
-    model: Optional[str] = "llama-3.3-70b-versatile"
+    model: Optional[str] = "qwen/qwen3.6-27b"
     simulation: Optional[bool] = False
 
 # Simulation Mock Response Lists for the 5 Scenarios
@@ -127,25 +127,27 @@ async def reset_state(start_date: Optional[str] = None):
     state = StudyPlannerState(start_date=start_date)
     return {"status": "success", "state": state.to_dict()}
 
+ALLOWED_MODELS = [
+    "qwen/qwen3.6-27b",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b"
+]
+
 @app.get("/api/models")
 async def list_models(x_groq_api_key: Optional[str] = Header(None)):
     if not x_groq_api_key or x_groq_api_key == "mock":
-        return {
-            "models": [
-                "llama-3.3-70b-versatile",
-                "llama-3.3-70b-specdec",
-                "llama-3.1-8b-instant",
-                "llama3-8b-8192"
-            ]
-        }
+        return {"models": ALLOWED_MODELS}
     try:
         from groq import Groq
         client = Groq(api_key=x_groq_api_key)
         models_data = client.models.list()
-        model_ids = sorted([m.id for m in models_data.data])
-        return {"models": model_ids}
+        retrieved_ids = [m.id for m in models_data.data]
+        filtered_models = [m for m in ALLOWED_MODELS if m in retrieved_ids]
+        if not filtered_models:
+            filtered_models = ALLOWED_MODELS
+        return {"models": filtered_models}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return {"models": ALLOWED_MODELS}
 
 # Mount static files to serve index.html, styles, and js
 if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):

@@ -12,6 +12,17 @@ TOOL_REGISTRY = {
     "set_study_limit": tools.set_study_limit
 }
 
+def safe_print(text: str):
+    """
+    Safely prints string to standard output, preventing UnicodeEncodeErrors on Windows consoles.
+    """
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        try:
+            print(text.encode('ascii', errors='replace').decode('ascii'))
+        except Exception:
+            pass
 
 def get_groq_client(api_key: str = None) -> Groq:
     """
@@ -123,7 +134,7 @@ def format_agent_prompt(goal: str, state: StudyPlannerState) -> str:
     return prompt
 
 
-def run_agent(goal: str, state: StudyPlannerState, client: Groq, model: str = "llama-3.3-70b-versatile", max_steps: int = 10) -> tuple:
+def run_agent(goal: str, state: StudyPlannerState, client: Groq, model: str = "qwen/qwen3.6-27b", max_steps: int = 10) -> tuple:
     """
     Executes the custom plan-act loop using the Groq API.
     """
@@ -173,8 +184,8 @@ def run_agent(goal: str, state: StudyPlannerState, client: Groq, model: str = "l
                     "observation": observation
                 })
                 
-                print(f"[Step {step_count}] Called tool '{tool_name}' with args {tool_args}")
-                print(f"         Observation: {observation}\n")
+                safe_print(f"[Step {step_count}] Called tool '{tool_name}' with args {tool_args}")
+                safe_print(f"         Observation: {observation}\n")
                 
             elif action == "ask_user":
                 message = response_json.get("message", "")
@@ -189,7 +200,7 @@ def run_agent(goal: str, state: StudyPlannerState, client: Groq, model: str = "l
                     },
                     "observation": "Waiting for user input."
                 })
-                print(f"[Step {step_count}] Agent asks user: {message}\n")
+                safe_print(f"[Step {step_count}] Agent asks user: {message}\n")
                 return message, state.history
                 
             elif action == "final_answer":
@@ -200,7 +211,7 @@ def run_agent(goal: str, state: StudyPlannerState, client: Groq, model: str = "l
                     "action": {"action": action, "message": message},
                     "observation": "Plan successfully generated."
                 })
-                print(f"[Step {step_count}] Final Answer:\n{message}\n")
+                safe_print(f"[Step {step_count}] Final Answer:\n{message}\n")
                 return message, state.history
                 
             else:
@@ -214,7 +225,7 @@ def run_agent(goal: str, state: StudyPlannerState, client: Groq, model: str = "l
                 "action": {"action": "parse_failure"},
                 "observation": err_msg
             })
-            print(f"[Step {step_count}] JSON parsing failed. Retrying...\n")
+            safe_print(f"[Step {step_count}] JSON parsing failed. Retrying...\n")
             
         except Exception as e:
             available_models = []
@@ -234,7 +245,7 @@ def run_agent(goal: str, state: StudyPlannerState, client: Groq, model: str = "l
                 "action": {"action": "internal_error"},
                 "observation": err_msg
             })
-            print(f"[Step {step_count}] System error: {str(e)}\n")
+            safe_print(f"[Step {step_count}] System error: {str(e)}\n")
             return f"Error executing agent: {str(e)}", state.history
             
         step_count += 1

@@ -720,9 +720,9 @@ async function loadAvailableModels() {
                 
                 // Friendly label formatting
                 let label = modelId;
-                if (modelId === 'llama-3.3-70b-versatile') label += ' (Recommended)';
-                else if (modelId === 'llama-3.3-70b-specdec') label += ' (Speculative)';
-                else if (modelId === 'llama-3.1-8b-instant') label += ' (Fast)';
+                if (modelId === 'qwen/qwen3.6-27b') label = 'Qwen 3.6 27B (Recommended)';
+                else if (modelId === 'openai/gpt-oss-120b') label = 'GPT OSS 120B (Reasoning)';
+                else if (modelId === 'openai/gpt-oss-20b') label = 'GPT OSS 20B (Fast Reasoning)';
                 
                 opt.textContent = label;
                 selectEl.appendChild(opt);
@@ -732,8 +732,8 @@ async function loadAvailableModels() {
             // otherwise select first item or default versatile model
             if (data.models.includes(currentSelected)) {
                 selectEl.value = currentSelected;
-            } else if (data.models.includes('llama-3.3-70b-versatile')) {
-                selectEl.value = 'llama-3.3-70b-versatile';
+            } else if (data.models.includes('qwen/qwen3.6-27b')) {
+                selectEl.value = 'qwen/qwen3.6-27b';
             } else {
                 selectEl.value = data.models[0];
             }
