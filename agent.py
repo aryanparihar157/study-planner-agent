@@ -239,7 +239,18 @@ def run_agent(goal: str, state: StudyPlannerState, client: Groq, model: str = "l
             
         except Exception as e:
             # General catch-all for tool errors or API connection problems
+            # Try to fetch available models from Groq using the client to aid troubleshooting
+            available_models = []
+            try:
+                models_data = client.models.list()
+                available_models = [m.id for m in models_data.data]
+            except Exception:
+                pass
+            
             err_msg = f"Error: An exception occurred: {str(e)}"
+            if available_models:
+                err_msg += f"\n\nAvailable models on your Groq key:\n- " + "\n- ".join(available_models)
+                
             state.history.append({
                 "step": step_count,
                 "thought": "Internal error.",
@@ -247,6 +258,7 @@ def run_agent(goal: str, state: StudyPlannerState, client: Groq, model: str = "l
                 "observation": err_msg
             })
             print(f"[Step {step_count}] System error: {str(e)}\n")
+            return f"Error executing agent: {str(e)}", state.history
             
         step_count += 1
         
