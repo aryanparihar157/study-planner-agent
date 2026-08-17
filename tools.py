@@ -172,3 +172,12 @@ def build_schedule(state: StudyPlannerState) -> dict:
         "warnings": warnings,
         "message": f"Successfully built schedule with {len(warnings)} warnings."
     }
+
+def set_study_limit(hours: float, state) -> dict:
+    """Updates the maximum study hours limit allowed per day."""
+    state.max_study_hours_per_day = float(hours)
+    return {
+        "status": "success",
+        "max_study_hours_per_day": float(hours),
+        "message": f"Successfully set daily study limit to {hours} hours."
+    }

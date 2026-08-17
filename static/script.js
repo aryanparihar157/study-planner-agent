@@ -291,6 +291,11 @@ async function executeAgentAction() {
             currentState = result.state;
             saveStateToLocalStorage();
             
+            // Sync values back to sidebar fields (in case updated by agent tools like set_study_limit)
+            elements.plannerStartDate.value = currentState.start_date;
+            elements.scheduleStartDate.textContent = currentState.start_date;
+            elements.maxHoursInput.value = currentState.max_study_hours_per_day;
+            
             // Render components
             elements.storedTasksCount.textContent = currentState.tasks.length;
             const warnings = getWarningsFromHistory(currentState.history);

@@ -8,8 +8,10 @@ import tools
 # A mapping of tool names to their actual Python functions
 TOOL_REGISTRY = {
     "add_task": tools.add_task,
-    "build_schedule": tools.build_schedule
+    "build_schedule": tools.build_schedule,
+    "set_study_limit": tools.set_study_limit
 }
+
 
 def get_groq_client(api_key: str = None) -> Groq:
     """
@@ -38,6 +40,8 @@ You have access to the following tools:
    - Builds a chronological study schedule from all stored tasks.
    - Fits study blocks before each due date, ordering tasks by deadline.
    - Returns daily study allocations and flags any schedule conflicts.
+3. `set_study_limit(hours: float)`
+   - Updates the maximum daily study limit allowed in hours.
 
 At each step, you must output a single JSON object. You have three possible actions:
 
@@ -55,8 +59,15 @@ At each step, you must output a single JSON object. You have three possible acti
      "tool_name": "build_schedule",
      "tool_args": {}
    }
+   OR
+   {
+     "thought": "Brief explanation of why you are setting the daily limit",
+     "action": "call_tool",
+     "tool_name": "set_study_limit",
+     "tool_args": {"hours": 3.0}
+   }
 
-2. Ask the user for clarification (if you are missing crucial information like a deadline):
+2. Ask the user for clarification (mandatory if you lack daily limits or task deadlines):
    {
      "thought": "Brief explanation of what information is missing",
      "action": "ask_user",
@@ -72,10 +83,16 @@ At each step, you must output a single JSON object. You have three possible acti
 
 Strict Rules:
 - You must output VALID JSON. No extra text, markdown formatting blocks around JSON, or explanation outside JSON.
-- If the user specifies tasks/deadlines, you must call `add_task` for each before calling `build_schedule`.
+- Daily Study Limit: If the user hasn't explicitly specified how many daily hours they want to study in their input, you MUST use `ask_user` to ask how many hours they can allocate daily. Give them options (1, 2, 3, 4 hours, or specify custom hours) and explain why this is needed.
+- Task Deadlines/Due Dates: If the user lists tasks but does not specify due dates or days, check the tasks. Approximate a reasonable deadline offset from the Current Start Date (e.g. 5 days for exams, 2 days for homework/assignments, 7 days for projects). Use `ask_user` to explain these estimated dates to the user and ask: "Do you want to plan till these dates, or would you like to specify custom end dates?"
+- Once the user answers your question in a follow-up turn:
+  - If they specify their daily hours, call `set_study_limit` to apply it.
+  - If they accept your estimated dates or provide custom ones, call `add_task` with those dates.
+  - Finally, call `build_schedule` and output your `final_answer`.
 - You must call `build_schedule` to generate the schedule structure before providing the `final_answer`.
 - Be agentic: Look at task deadlines, ensure study blocks are scheduled BEFORE the task's due date, and report any conflicts or capacity warnings.
 """
+
 
 
 def format_agent_prompt(goal: str, state: StudyPlannerState) -> str:
